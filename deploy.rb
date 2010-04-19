@@ -235,6 +235,22 @@ namespace :deploy do
       run "cd #{current_path}; rake db:seed RAILS_ENV=#{rails_env}"
     end
 
+#   To restore the backup run the following command:
+#   mysql database_name -uroot < filename.sqlite3
+    desc "Backup the database to a file."
+    task :backup  do
+      backup_dir = "~/backup"      
+      filename = "#{backup_dir}/cmc_production_db.dump.#{Time.now.to_f}.sql.bz2"
+      text = capture "cat #{current_path}/config/database.yml"
+      yaml = YAML::load(text)
+      
+      on_rollback { run "rm #{filename}" }
+      run "mysqldump -u #{yaml['production']['username']} -p #{yaml['production']['database']} | bzip2 -c > #{filename}" do |ch, stream, out|
+      ch.send_data "#{yaml['production']['password']}\n" if out =~ /^Enter password:/
+
+      end
+    end
+
   end
 
   namespace :gems do
